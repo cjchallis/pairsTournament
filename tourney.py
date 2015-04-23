@@ -18,23 +18,15 @@ except ImportError:
     numpy = False
 
 
-
-# Specify strategies to import here
-from strategies.chrisStrategies import SmartRatio
 from strategies.DannisStrategy import NoCardKnowledge
-from strategies.michaelStrategies import OverThinker
-from strategies.alexStrategies import CruelFoldNoCount
-from strategies.brianStrategies import noPeek
-#from strategies.chrisStrategies import Interactive
 
-# Initalize strategies in dict
-strategies = {"Chris": SmartRatio(1.1),
-              "Alex": CruelFoldNoCount(),
-              "Danni": NoCardKnowledge(4),
-              "Brian": noPeek(),
-              "Michael": OverThinker(),
-#              "Me": Interactive()
-              }
+strategies = {"Normal 1": NoCardKnowledge(N = 0),
+#              "Normal 2": NoCardKnowledge(N = 0),
+#              "Normal 3": NoCardKnowledge(N = 0),
+#              "Handicap 1": NoCardKnowledge(N = 0),
+#              "Handicap 2": NoCardKnowledge(N = 0),
+              "Handicap 3": NoCardKnowledge(N = 0),
+             }
 
 for key, value in strategies.items():
     value.tourney_key = key
@@ -42,7 +34,7 @@ for key, value in strategies.items():
 class Tourney:
 
     def __init__(self, strategies, games = 50000, check = 100, prob = 0.95,
-                 prior = 500):
+                 prior = 500, handicap = 0):
         self.strats = strategies
         self.n = len(strategies)
         self.games = games
@@ -54,15 +46,19 @@ class Tourney:
         self.interactive = False
         self.nw = max(len(k) for k in strategies.keys()) + 5
         self.rw = 10
+        self.handicap = handicap
 
     def play(self):
         for g in range(self.games):
-            d = p.Dealer(self.n, verbose = False, standard = True,
+            d = p.Dealer(self.n, verbose = True, standard = True,
                          calamity = False)
             keys = list(self.strats.values())
             shuffle(keys)
             for j, s in enumerate(keys):
                 d.gameState.players[j].strategy = s
+                if "Handicap" in s.tourney_key:
+                    d.gameState.deck.remove(self.handicap)
+                    d.gameState.players[j].points = [self.handicap]
             # play a game and get the key of the losing strategy
             loser = d.gameState.players[d.play()].strategy.tourney_key
             self.lost[loser] += 1
@@ -139,7 +135,7 @@ class GrandTourney:
         return chain.from_iterable(combinations(keys, n)
                                    for n in range(2, len(keys)+1))
         
-    def play(self, stop = True):
+    def play(self, stop = False):
         subsets = self._create_subsets()
         for subset in subsets:
             self.results[subset] = Tourney({s:self.strats[s]
@@ -224,7 +220,7 @@ if __name__ == "__main__":
         original = sys.stdout
         sys.stdout = Tee(sys.stdout, f)
     
-    tourney = GrandTourney(strategies, games = 10, check = 10)
+    tourney = Tourney(strategies, games = 5, check = 1, handicap = 10)
     tourney.play()
     
     if(log):
