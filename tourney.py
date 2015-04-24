@@ -28,12 +28,12 @@ from strategies.chrisStrategies import HitMe
 from strategies.chrisStrategies import Weights
 
 # Initalize strategies in dict
-strategies = {"Champ0": PureExp(0.9, 8),
-              "Champ1": PureExp(0.9, 8),
-              "Champ2": PureExp(0.9, 8),
-              "Handicap3": PureExp(0.9, 8),
-              "Handicap4": PureExp(0.9, 8),
-              "Handicap5": PureExp(0.9, 8),
+strategies = {"Weight 1.6": Weights(1.6, "log"),
+              "Weight 1.5": Weights(1.5, "log"),
+              "Weight 1.7": Weights(1.7, "log"),
+              "Champ": PureExp(0.9, 8),
+              "Weight Emp": Weights(1, "emp"),
+              "Weight 2.5": Weights(2.5, "log"),
               }
 
 for key, value in strategies.items():
@@ -58,7 +58,7 @@ class Tourney:
 
     def play(self):
         for g in range(self.games):
-            d = p.Dealer(self.n, verbose = True, standard = True,
+            d = p.Dealer(self.n, verbose = False, standard = True,
                          calamity = False)
             keys = list(self.strats.values())
             shuffle(keys)
@@ -228,9 +228,15 @@ if __name__ == "__main__":
         original = sys.stdout
         sys.stdout = Tee(sys.stdout, f)
     
-    tourney = Tourney(strategies, games = 10000, check = 1000, handicap = 10)
-    tourney.play()
-    
+    risk = {}
+    for h in range(3,11):
+        tourney = Tourney(strategies, games = 10000, check = 1000,
+                          handicap = h)
+        lost = tourney.play()
+        #h_loss = sum(v for k,v in lost.items() if "Handicap" in k)
+        #risk[h] = h_loss / (10000 - h_loss)
+    print(risk)    
+
     if(log):
         f.close()
         sys.stdout = original

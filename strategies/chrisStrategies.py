@@ -184,12 +184,22 @@ class PureExp:
 
 class Weights:
 
-    def __init__(self, mult):
+    def __init__(self, mult, weight):
         self.mult = mult
         self.pe = PureExp(0.9, 8)
+        self.fcn = {"log": self._log_weight,
+                    "emp": self._empirical,
+                   }[weight]
+
         
     def _log_weight(self, k):
         return self.mult * log(max(12-k,1)) + 1
+
+    def _empirical(self, k):
+        k = min(11, k)
+        if k < 0:
+            return 10 ** 6
+        return 1 + 0.55*(11-k) 
 
     def play(self, info):
         self.pe.player = self.player
@@ -237,7 +247,7 @@ class Weights:
         max_sc = max(11, 60 / len(info.players) + 1)
         scores = [p.getScore() for p in info.players]
         scores[idx] += c
-        weights = [self._log_weight(max_sc - s) for s in scores]
+        weights = [self.fcn(max_sc - s) for s in scores]
         return weights[self.player._index] / sum(weights)
        
 
