@@ -1,6 +1,6 @@
 from __future__ import division
-from math import ceil
 from copy import copy
+from math import log
 
 class FoldLowWithHigh:
     def __init__(self, fold, hand):
@@ -154,4 +154,94 @@ class Interactive:
         print('\tpoints: %d' % (self.player.getScore()))
 
 
+class PureExp:
+    '''
+    Initial standard bot. Decides only based on expected points now 
+    from hit vs available fold.
+    '''
+    def __init__(self, mult, nd):
+        self.mult = mult
+        self.nd = nd
 
+    def play(self, info):
+        hand = self.player.stack
+        fold = info.bestFold(self.player)
+        play_to = max(60 / len(info.players) + 1, 11)
+        scores = [p.getScore() for p in info.players]
+        if (play_to - max(scores) <= self.nd and max(hand) + 
+            self.player.getScore() >= play_to):
+            return fold
+        if fold[1] < self.mult * self._ev_hit(self.player.stack, info.deck):
+            return fold
+        return "hit"
+
+    def _ev_hit(self, hand, deck):
+        return sum([self._p_deal(c, deck) * c for c in hand])
+
+    def _p_deal(self, c, deck):
+        return deck.count(c) / len(deck)
+
+
+class Weights:
+
+    def __init__(self, mult):
+        self.mult = mult
+        self.pe = PureExp(0.9, 8)
+        
+    def _log_weight(self, k):
+        return self.mult * log(max(12-k,1)) + 1
+
+    def play(self, info):
+        self.pe.player = self.player
+        fold = info.bestFold(self.player)
+        me = self.player._index
+        p_lose_fold = self._p_lose_new(fold[1], info, me) 
+        p_lose_hit = p_pair = 0
+        for c in self.player.stack:
+            p_pair += self._p_deal(c, info.deck)
+            p_lose_hit += (self._p_deal(c, info.deck) * 
+                           self._p_lose_new(c, info, me))
+        p_nxt = 1 - p_pair
+        n = len(info.players)
+        for i in range(n):
+            j = (me + i + 1) % n
+            # for now assume other players always hit
+            p_pair = 0
+            for c in info.players[j].stack:
+                p_pair += self._p_deal(c, info.deck)
+                p_lose_hit += (p_nxt * self._p_deal(c, info.deck) *
+                               self._p_lose_new(c, info, j))
+            p_nxt *= 1 - p_pair
+        # assumption for probability of losing if reach next turn
+        nxt_fold = min(fold[1], self._exp_fold(info.deck, n-1))
+        p_lose_hit += p_nxt * self._p_lose_new(nxt_fold, info, me)
+        #print("Lose from hit: " + str(p_lose_hit))
+        #print("Lose from fold: " + str(p_lose_fold))
+        if abs(p_lose_fold - p_lose_hit) < 0.05:
+            return self.pe.play(info)
+        if p_lose_fold < p_lose_hit:
+            return fold
+        return "hit"
+
+    def _p_deal(self, c, deck):
+        return deck.count(c) / len(deck)
+
+    def _exp_fold(self, deck, trials):
+        pmf = [self._p_deal(c, deck) for c in range(1, 11)]
+        cdf = [sum(pmf[0:i]) for i in range(10)]
+        min_cdf = [1 - (1-c) ** trials for c in cdf]
+        min_pmf = [min_cdf[0]] + [min_cdf[i+1] - min_cdf[i] for i in range(9)]
+        return sum(min_pmf[c-1] * c for c in range(1,11))
+
+    def _p_lose_new(self, c, info, idx):
+        max_sc = max(11, 60 / len(info.players) + 1)
+        scores = [p.getScore() for p in info.players]
+        scores[idx] += c
+        weights = [self._log_weight(max_sc - s) for s in scores]
+        return weights[self.player._index] / sum(weights)
+       
+
+class HitMe:
+
+    def play(self, info):
+        return "hit"

@@ -18,15 +18,23 @@ except ImportError:
     numpy = False
 
 
+# Specify strategies to import here
+from strategies.chrisStrategies import PureExp
 from strategies.DannisStrategy import NoCardKnowledge
+from strategies.michaelStrategies import OverThinker
+from strategies.alexStrategies import CruelFoldNoCount
+from strategies.brianStrategies import noPeek
+from strategies.chrisStrategies import HitMe 
+from strategies.chrisStrategies import Weights
 
-strategies = {"Normal 1": NoCardKnowledge(N = 0),
-#              "Normal 2": NoCardKnowledge(N = 0),
-#              "Normal 3": NoCardKnowledge(N = 0),
-#              "Handicap 1": NoCardKnowledge(N = 0),
-#              "Handicap 2": NoCardKnowledge(N = 0),
-              "Handicap 3": NoCardKnowledge(N = 0),
-             }
+# Initalize strategies in dict
+strategies = {"Champ0": PureExp(0.9, 8),
+              "Champ1": PureExp(0.9, 8),
+              "Champ2": PureExp(0.9, 8),
+              "Handicap3": PureExp(0.9, 8),
+              "Handicap4": PureExp(0.9, 8),
+              "Handicap5": PureExp(0.9, 8),
+              }
 
 for key, value in strategies.items():
     value.tourney_key = key
@@ -220,7 +228,7 @@ if __name__ == "__main__":
         original = sys.stdout
         sys.stdout = Tee(sys.stdout, f)
     
-    tourney = Tourney(strategies, games = 5, check = 1, handicap = 10)
+    tourney = Tourney(strategies, games = 10000, check = 1000, handicap = 10)
     tourney.play()
     
     if(log):
