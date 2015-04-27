@@ -159,7 +159,7 @@ class PureExp:
     Initial standard bot. Decides only based on expected points now 
     from hit vs available fold.
     '''
-    def __init__(self, mult, nd):
+    def __init__(self, mult = .9, nd = 8):
         self.mult = mult
         self.nd = nd
 
@@ -184,15 +184,19 @@ class PureExp:
 
 class Weights:
 
-    def __init__(self, mult, weight):
+    def __init__(self, mult = 1.6, weight = "log", term = False, eps = 0.01):
+        self.term = term
         self.mult = mult
         self.pe = PureExp(0.9, 8)
+        self.eps = eps
         self.fcn = {"log": self._log_weight,
                     "emp": self._empirical,
                    }[weight]
 
         
     def _log_weight(self, k):
+        if self.term and k < 1:
+            return 10 ** 4
         return self.mult * log(max(12-k,1)) + 1
 
     def _empirical(self, k):
@@ -203,6 +207,11 @@ class Weights:
 
     def play(self, info):
         self.pe.player = self.player
+        n = len(info.players)
+        if n == 2:
+            return self.pe.play(info)
+        if n == 3:
+            self.mult = 1
         fold = info.bestFold(self.player)
         me = self.player._index
         p_lose_fold = self._p_lose_new(fold[1], info, me) 
@@ -212,7 +221,6 @@ class Weights:
             p_lose_hit += (self._p_deal(c, info.deck) * 
                            self._p_lose_new(c, info, me))
         p_nxt = 1 - p_pair
-        n = len(info.players)
         for i in range(n):
             j = (me + i + 1) % n
             # for now assume other players always hit
@@ -227,7 +235,7 @@ class Weights:
         p_lose_hit += p_nxt * self._p_lose_new(nxt_fold, info, me)
         #print("Lose from hit: " + str(p_lose_hit))
         #print("Lose from fold: " + str(p_lose_fold))
-        if abs(p_lose_fold - p_lose_hit) < 0.05:
+        if abs(p_lose_fold - p_lose_hit) < self.eps:
             return self.pe.play(info)
         if p_lose_fold < p_lose_hit:
             return fold

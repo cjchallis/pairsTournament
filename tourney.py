@@ -28,12 +28,11 @@ from strategies.chrisStrategies import HitMe
 from strategies.chrisStrategies import Weights
 
 # Initalize strategies in dict
-strategies = {"Weight 1.6": Weights(1.6, "log"),
-              "Weight 1.5": Weights(1.5, "log"),
-              "Weight 1.7": Weights(1.7, "log"),
-              "Champ": PureExp(0.9, 8),
-              "Weight Emp": Weights(1, "emp"),
-              "Weight 2.5": Weights(2.5, "log"),
+strategies = {"Weight 1.6": Weights(1.6, "log", term = True),
+              "Weight 1.5": Weights(1.5, "log", term = True),
+              "Weight 1.4": Weights(1.4, "log", term = True),
+              "Weight 1.7": Weights(1.7, "log", term = True),
+              "Champ": PureExp(),
               }
 
 for key, value in strategies.items():
@@ -228,14 +227,13 @@ if __name__ == "__main__":
         original = sys.stdout
         sys.stdout = Tee(sys.stdout, f)
     
-    risk = {}
-    for h in range(3,11):
-        tourney = Tourney(strategies, games = 10000, check = 1000,
-                          handicap = h)
-        lost = tourney.play()
+#    risk = {}
+#    for h in range(3,11):
+    tourney = GrandTourney(strategies, games = 10000, check = 1000)
+    lost = tourney.play()
         #h_loss = sum(v for k,v in lost.items() if "Handicap" in k)
         #risk[h] = h_loss / (10000 - h_loss)
-    print(risk)    
+#    print(risk)    
 
     if(log):
         f.close()
