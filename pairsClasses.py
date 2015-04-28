@@ -81,7 +81,8 @@ class Dealer:
             cal = False
             currentPlayer = self.gameState.players[currentIndex]
             pre_pts = currentPlayer.getScore()
-            info = deepcopy(self.gameState)
+            info = self.gameState
+            #info = deepcopy(self.gameState)
             inStacks = self.gameState.inStacks()
             if inStacks == [] or \
              len(currentPlayer.stack) == 0 or \

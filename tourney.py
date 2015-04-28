@@ -28,11 +28,13 @@ from strategies.chrisStrategies import HitMe
 from strategies.chrisStrategies import Weights
 
 # Initalize strategies in dict
-strategies = {"Weight 1.6": Weights(1.6, "log", term = True),
-              "Weight 1.5": Weights(1.5, "log", term = True),
-              "Weight 1.4": Weights(1.4, "log", term = True),
-              "Weight 1.7": Weights(1.7, "log", term = True),
-              "Champ": PureExp(),
+strategies = {"Champ": PureExp(),
+              #"W n1": Weights(mult = 1.6, term = True, nxt = True),
+              #"W n2": Weights(mult = 1.6, term = True, nxt = True),
+              #"W n3": Weights(mult = 1.6, term = True, nxt = True),
+              #"W y1": Weights(mult = 1.6, term = True, nxt = True, shuf = True),
+              #"W y2": Weights(mult = 1.6, term = True, nxt = True, shuf = True),
+               "Chall": PureExp(.85, 7),
               }
 
 for key, value in strategies.items():
@@ -229,8 +231,29 @@ if __name__ == "__main__":
     
 #    risk = {}
 #    for h in range(3,11):
-    tourney = GrandTourney(strategies, games = 10000, check = 1000)
-    lost = tourney.play()
+#    import cProfile
+    champMult = 0.9
+    champNear = 8
+    challMult = 0.718778
+    challNear = 4
+    from random import gauss, randint
+    for i in range(100):
+        strategies = {"Champ": PureExp(champMult, champNear),
+                      "Chall": PureExp(challMult, challNear),
+                     }
+        for key, value in strategies.items():
+            value.tourney_key = key
+        tourney = Tourney(strategies, games = 10000, check = 1000)
+        lost = tourney.play()
+        if lost["Champ"]-20 > lost["Chall"]:
+            champMult = challMult
+            champNear = challNear
+        challMult = champMult + gauss(0, .1)
+        challNear = champNear + randint(-3,3)
+        print(champMult)
+        print(champNear)
+        print(challMult)
+        print(challNear)
         #h_loss = sum(v for k,v in lost.items() if "Handicap" in k)
         #risk[h] = h_loss / (10000 - h_loss)
 #    print(risk)    

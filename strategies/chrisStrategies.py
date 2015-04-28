@@ -184,16 +184,21 @@ class PureExp:
 
 class Weights:
 
-    def __init__(self, mult = 1.6, weight = "log", term = False, eps = 0.01):
+    def __init__(self, mult = 1.6, weight = "log", term = False, eps = 0.01,
+                 exp = 0.5, nxt = False, shuf = False):
+        self.burn = 5
+        self.shuf = shuf
         self.term = term
         self.mult = mult
+        self.nxt = nxt
         self.pe = PureExp(0.9, 8)
         self.eps = eps
+        self.exp = exp
         self.fcn = {"log": self._log_weight,
                     "emp": self._empirical,
+                    "exp": self._exponential,
                    }[weight]
 
-        
     def _log_weight(self, k):
         if self.term and k < 1:
             return 10 ** 4
@@ -205,15 +210,30 @@ class Weights:
             return 10 ** 6
         return 1 + 0.55*(11-k) 
 
+    def _exponential(self, k):
+        k = min(11, k)
+        if k < 1:
+            return 10 ** 4
+        return self.mult * ((12-k) ** self.exp - 1) + 1
+
     def play(self, info):
         self.pe.player = self.player
         n = len(info.players)
-        if n == 2:
-            return self.pe.play(info)
-        if n == 3:
-            self.mult = 1
+        #if n < 5:
+        #    return self.pe.play(info)
+        max_sc = max(60 / n + 1, 11)
         fold = info.bestFold(self.player)
         me = self.player._index
+
+        if len(info.deck) < self.burn + n: # reshuffle will occur during round
+            self.deck = []                                                      
+            for i in range(1, 11):                                              
+                self.deck += [i] * i                                            
+            for i in info.inPoints() + info.inStacks():                         
+                self.deck.remove(i)   
+        deck = info.deck
+        if len(deck) == self.burn and self.shuf:
+            deck = self.deck
         p_lose_fold = self._p_lose_new(fold[1], info, me) 
         p_lose_hit = p_pair = 0
         for c in self.player.stack:
@@ -221,18 +241,25 @@ class Weights:
             p_lose_hit += (self._p_deal(c, info.deck) * 
                            self._p_lose_new(c, info, me))
         p_nxt = 1 - p_pair
-        for i in range(n):
+
+        for i in range(n-1):
             j = (me + i + 1) % n
+            if len(deck) == self.burn + (i+1) and self.shuf:
+                deck = self.deck
             # for now assume other players always hit
             p_pair = 0
             for c in info.players[j].stack:
-                p_pair += self._p_deal(c, info.deck)
-                p_lose_hit += (p_nxt * self._p_deal(c, info.deck) *
+                p_pair += self._p_deal(c, deck)
+                p_lose_hit += (p_nxt * self._p_deal(c, deck) *
                                self._p_lose_new(c, info, j))
             p_nxt *= 1 - p_pair
-        # assumption for probability of losing if reach next turn
-        nxt_fold = min(fold[1], self._exp_fold(info.deck, n-1))
-        p_lose_hit += p_nxt * self._p_lose_new(nxt_fold, info, me)
+        # if reach next turn, terminal value is expected fold or
+        # current state, with penalty for going first
+        nxt_fold = min(fold[1], self._exp_fold(deck, n))
+        if self.nxt and nxt_fold + self.player.getScore() >= max_sc:
+            p_lose_hit +=  p_nxt * (n+2)/(n+1) * self._p_lose_new(0, info, me)
+        else:
+            p_lose_hit += p_nxt * self._p_lose_new(nxt_fold, info, me)
         #print("Lose from hit: " + str(p_lose_hit))
         #print("Lose from fold: " + str(p_lose_fold))
         if abs(p_lose_fold - p_lose_hit) < self.eps:
