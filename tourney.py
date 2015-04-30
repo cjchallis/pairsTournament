@@ -20,20 +20,21 @@ except ImportError:
 
 
 # Specify strategies to import here
-from strategies.chrisStrategies import PureExp
 from strategies.DannisStrategy import NoCardKnowledge
-from strategies.michaelStrategies import OverThinker
-from strategies.alexStrategies import CruelFoldNoCount
-from strategies.brianStrategies import noPeek
-from strategies.chrisStrategies import HitMe 
+from strategies.michaelStrategies import OverThinkerJrTHEDESTROYER
+from strategies.alexStrategies import Wizard 
+from strategies.brianStrategies import trad 
 from strategies.chrisStrategies import Weights
+from strategies.daveStrategies import otherShoe3
+from strategies.daveStrategies import expValue
 
 # Initalize strategies in dict
-strategies = {"Champ": PureExp(0.9, 8),
-              "Weights 1.3": Weights(1.3),
-              "Weights 1.7": Weights(1.7),
-              "Weights 1.6": Weights(1.6),
-              "Weights 1.5": Weights(1.5)
+strategies = {"Michael": OverThinkerJrTHEDESTROYER(),
+              "Brian": trad(),
+              "Dave": expValue(),
+              "Danni": NoCardKnowledge(0),
+              "Chris": Weights(),
+              "Alex": Wizard(),
               }
 
 for key, value in strategies.items():
@@ -85,7 +86,7 @@ class Tourney:
         print(row.format("", "Lost", "Percent"))
         for key in self.strats:
             print(row.format(key, str(self.lost[key]), 
-                             '%.2f' % (self.lost[key] / g)))
+                             '%.3f' % (self.lost[key] / g)))
     
         if numpy:
             self._report_probs()
@@ -105,8 +106,8 @@ class Tourney:
             row = "{:<%d}{:<%d}{:<%d}" % (self.nw, self.rw, self.rw)
             print(row.format("", "P(best)", "P(worst)"))
             for i, key in enumerate(self.strats):
-                print(row.format(key,'%.2f' % best[keys.index(key)],
-                                 '%.2f' % worst[keys.index(key)]))
+                print(row.format(key,'%.3f' % best[keys.index(key)],
+                                 '%.3f' % worst[keys.index(key)]))
             if max(best) > self.prob and max(worst) > self.prob:
                 print("Stopping early due to high probabilities "
                       "of best and worst. (Threshold set to %s)" % 
@@ -163,8 +164,8 @@ class GrandTourney:
             self.strats[key].gt_games += total
             self.strats[key].gt_losses += losses
             self.strats[key].gt_indices[len(results)].append(index)
-            print(row.format(key, str(losses), '%.2f' % percent,
-                             '%.2f' % index))
+            print(row.format(key, str(losses), '%.3f' % percent,
+                             '%.3f' % index))
         print('\n')
         
     def _grand_tourney_report(self):
@@ -195,7 +196,7 @@ class GrandTourney:
             overall[key] = sum(strat.gt_means) / len(strat.gt_means)
             strat.gt_means.append(overall[key])
             for i in range(len(strat.gt_means)):
-                strat.gt_means[i] = '%.2f' % strat.gt_means[i]
+                strat.gt_means[i] = '%.3f' % strat.gt_means[i]
                 
         
         order = sorted(overall, key=overall.get)
@@ -224,7 +225,7 @@ if __name__ == "__main__":
         original = sys.stdout
         sys.stdout = Tee(sys.stdout, f)
     
-    tourney = GrandTourney(strategies, games = 50000, check = 5000)
+    tourney = Tourney(strategies, games = 1000000, check = 1000, prob = 0.99)
     tourney.play()
     
     if(log):
