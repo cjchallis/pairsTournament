@@ -1,3 +1,7 @@
+from copy import deepcopy
+from random import random, randint
+
+
 # -*- coding: utf-8 -*-
 # Classes used by the tournament program to run computer continuous Pairs
 
@@ -70,7 +74,6 @@ class Dealer:
             self.vPrint(p.stack)
 
     def play(self):
-        from copy import deepcopy
         self.deal() # should be called by Tournament?
         highestScore = max(int(60 / self.gameState.noPlayers) + 1, 11)
 
@@ -269,3 +272,82 @@ class SimpletonStrategy:
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
+    
+
+class BlackStone (Dealer):
+    
+    def __init__(self):
+        Dealer.__init__(self)
+        for p in self.gameState.players:
+            p.money = 0
+            p.active = True
+            p.strategy = Random()
+        self.gameState.white_stones = []
+        self.gameState.pool = 0
+        self.gameState.pile = []
+  
+    
+    def play(self):
+        players = self.gameState.players
+        self.deal()
+        self.get_white(players)
+        print(self.gameState.pile)
+        hit = 1
+        idx = self.gameState.startIndex
+        pair = False
+        
+        while not pair:
+            cost = 0
+            p = players[idx]
+            if p.active:
+                move = p.strategy.play(deepcopy(self.gameState), hit)
+                try:
+                    hit = max(hit, int(move))
+                except(TypeError, ValueError):
+                    cost = len(self.gameState.pile) // 2
+                    p.active = False
+                                       
+            if p.active:
+                pair = self.deal_to(p, hit)
+                self.get_white([p])
+                if pair:
+                    cost = len(self.gameState.pile)
+                    p.active = False      
+            self.gameState.pool += cost
+            p.money -= cost
+            idx = (idx + 1) % len(players)
+            
+        remain = sum(1 for p in players if p.active)
+        winnings, self.gameState.pool = divmod(self.gameState.pool, remain)
+        for p in players:
+            if p.active:
+                p.money += winnings
+                    
+    
+    def deal_to(self, p, hit):
+        for i in range(hit):
+            p.stack.append(self.gameState.draw())
+            if p.stack.count(10) == 2:
+                return True
+        return False
+            
+    
+    def get_white(self, players):
+        for p in players:
+            w = [c for c in p.stack if c != 10]
+            self.gameState.pile.extend(w)
+            for c in w:
+                p.stack.remove(c)
+ 
+
+class Marcelo (object):
+    def play(self, info, hit):
+        return 5
+
+
+class Random (object):
+    def play(self, info, hit):
+        if random() < .8:
+            return hit + randint(0, 2)
+        return 'fold'
+
