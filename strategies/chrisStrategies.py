@@ -245,3 +245,21 @@ class HitMe:
 
     def play(self, info):
         return "hit"
+        
+        
+class BlackSimple (object):
+    
+    def play(self, info, hit):
+        stacks = [c for p in info.players for c in p.stack]
+        if self.player.stack == [10] and stacks == [10]:
+            return 'fold'
+        if not self.player.stack and len(stacks) >= 2:
+            return 5
+        return hit
+        
+
+class BlackExp (object):
+    
+    def play(self, info, hit):
+        return 5
+        

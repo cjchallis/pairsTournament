@@ -276,14 +276,14 @@ if __name__ == "__main__":
 
 class BlackStone (Dealer):
     
-    def __init__(self):
-        Dealer.__init__(self)
+    def __init__(self, n, pool):
+        Dealer.__init__(self, noPlayers = n)
         for p in self.gameState.players:
             p.money = 0
             p.active = True
             p.strategy = Random()
         self.gameState.white_stones = []
-        self.gameState.pool = 0
+        self.gameState.pool = pool
         self.gameState.pile = []
   
     
@@ -291,7 +291,6 @@ class BlackStone (Dealer):
         players = self.gameState.players
         self.deal()
         self.get_white(players)
-        print(self.gameState.pile)
         hit = 1
         idx = self.gameState.startIndex
         pair = False

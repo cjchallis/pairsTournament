@@ -7,7 +7,7 @@ and passed to tournament function.
 '''
 from __future__ import division
 from itertools import chain, combinations
-import pairsClasses as p
+from pairsClasses import *
 from random import shuffle
 try:
     import numpy as np
@@ -20,7 +20,7 @@ except ImportError:
 
 
 # Specify strategies to import here
-from strategies.chrisStrategies import PureExp
+from strategies.chrisStrategies import BlackStoneSimple
 from strategies.DannisStrategy import NoCardKnowledge
 from strategies.michaelStrategies import OverThinker
 from strategies.alexStrategies import CruelFoldNoCount
@@ -29,12 +29,14 @@ from strategies.chrisStrategies import HitMe
 from strategies.chrisStrategies import Weights
 
 # Initalize strategies in dict
-strategies = {"Champ": PureExp(0.9, 8),
-              "Weights 1.3": Weights(1.3),
-              "Weights 1.7": Weights(1.7),
-              "Weights 1.6": Weights(1.6),
-              "Weights 1.5": Weights(1.5)
+strategies = {"M 1": Marcelo(),
+              "R 1": Random(),
+              "R": Random(),
+              "M": Marcelo(),
+              "C": BlackStoneSimple()
               }
+              
+money = dict.fromkeys(strategies, 0)
 
 for key, value in strategies.items():
     value.tourney_key = key
@@ -56,16 +58,17 @@ class Tourney:
         self.rw = 10
 
     def play(self):
+        pool = 0
         for g in range(self.games):
-            d = p.Dealer(self.n, verbose = False, standard = True,
-                         calamity = False)
+            d = BlackStone(pool = pool, n = self.n)
             keys = list(self.strats.values())
             shuffle(keys)
             for j, s in enumerate(keys):
                 d.gameState.players[j].strategy = s
-            # play a game and get the key of the losing strategy
-            loser = d.gameState.players[d.play()].strategy.tourney_key
-            self.lost[loser] += 1
+            d.play()
+            for p in d.gameState.players:
+                money[p.strategy.tourney_key] += p.money
+            pool = d.gameState.pool
             if not (g+1) % self.check:
                 self._summary(g+1)
             if self.interactive:
@@ -82,12 +85,12 @@ class Tourney:
         print("--------------------------------")
         print("Games Played:\t" + str(g) + "\n")
         row = "{:<%d}{:<%d}{:<%d}" % (self.nw, self.rw, self.rw)
-        print(row.format("", "Lost", "Percent"))
+        print(row.format("", "Winnings", "Per Round"))
         for key in self.strats:
-            print(row.format(key, str(self.lost[key]), 
-                             '%.2f' % (self.lost[key] / g)))
+            print(row.format(key, str(money[key]), 
+                             '%.2f' % (money[key] / g)))      
     
-        if numpy:
+        if numpy and False:
             self._report_probs()
     
     def _report_probs(self):
@@ -224,7 +227,7 @@ if __name__ == "__main__":
         original = sys.stdout
         sys.stdout = Tee(sys.stdout, f)
     
-    tourney = GrandTourney(strategies, games = 50000, check = 5000)
+    tourney = Tourney(strategies, games = 100000, check = 1000)
     tourney.play()
     
     if(log):
